@@ -12,6 +12,8 @@ References:
         https://docs.python.org/3/howto/argparse.html
     PEP 257 - Python Docstring Conventions:
         https://www.python.org/dev/peps/pep-0257/
+    Wordnet Bahasa:
+        https://sourceforge.net/p/wn-msa/tab/HEAD/tree/trunk/
 
 @author: David Moeljadi <davidmoeljadi@gmail.com>
 '''
@@ -52,6 +54,7 @@ import os
 import argparse
 import codecs
 from collections import namedtuple
+from collections import defaultdict
 
 #-----------------------------------------------------------------------
 # CONFIGURATION
@@ -68,19 +71,31 @@ BARASA_FILE     = './data/barasa.txt'
 SynsetInfo = namedtuple('SynsetInfo', ['synset', 'pos', 'neg'])
 LemmaInfo  = namedtuple('LemmaInfo', ['lemma', 'pos', 'neg'])
 BarasaInfo = namedtuple('BarasaInfo', ['synset', 'lang', 'goodness', 'lemma', 'pos', 'neg'])
+
 #-----------------------------------------------------------------------
 # FUNCTIONS
 #-----------------------------------------------------------------------
 
 def read_barasa():
-    lemma_scores = {}
+    ''' This function checks the polarity scores of lemmas
+    '''
+    lemma_list = []
     with codecs.open(BARASA_FILE, encoding='utf-8', mode='r') as barasa_file:
         for line in barasa_file.readlines():
-            synset, lang, goodness, lemma, pos, neg = line.strip().split('\t')
-            lemma_scores[lemma] = BarasaInfo(synset, lang, goodness, lemma, pos, neg)
-    return lemma_scores
+            items = line.strip().split('\t')
+            lemma_list.append(items)
+        lemma_dict = defaultdict(list)
+        for synset, lang, goodness, lemma, pos, neg in lemma_list:
+            # [2016-03-02 DM] information extracted from https://sourceforge.net/p/wn-msa/tab/HEAD/tree/trunk/
+            # language: B=Indonesian and Malaysian, I=Indonesian, M=Malaysian
+            # Goodness: Y=hand checked and good, O=good, M=OK, L=low, X=hand checked and bad
+            if (lang=='I' or lang=='B') and (goodness=="Y" or goodness=="O"):
+                lemma_dict[lemma].append(BarasaInfo(synset, lang, goodness, lemma, pos, neg))
+    return lemma_dict
 
 def gen_barasa():
+    ''' This function generates a barasa.txt file with information of polarity scores
+    '''
     print("Generating Barasa")
 
     SYNSET_SCORE = {}
@@ -88,9 +103,9 @@ def gen_barasa():
 
     with codecs.open(SENTI_WORDNET_FILE, encoding='utf-8', mode='r') as SentiWN:
         for line in SentiWN.readlines():
-            if line.startswith('#'): ## ignore comments
+            if line.startswith('#'): # ignore comments
                 continue
-            ## strip off end-of-line, then split
+            # strip off end-of-line, then split
             pos, snum, pscore, nscore, lemma, definition = line.strip().split('\t')
             synset = '%s-%s' % (snum, pos)
             SYNSET_SCORE[synset] = SynsetInfo(synset, pscore, nscore)
