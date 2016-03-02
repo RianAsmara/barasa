@@ -6,12 +6,12 @@ Barasa - Indonesian SentiWordNet.
 Latest version can be found at https://github.com/neocl/barasa
 
 References:
-	Python documentation:
-		https://docs.python.org/
-	argparse module:
-		https://docs.python.org/3/howto/argparse.html
-	PEP 257 - Python Docstring Conventions:
-		https://www.python.org/dev/peps/pep-0257/
+    Python documentation:
+        https://docs.python.org/
+    argparse module:
+        https://docs.python.org/3/howto/argparse.html
+    PEP 257 - Python Docstring Conventions:
+        https://www.python.org/dev/peps/pep-0257/
 
 @author: David Moeljadi <davidmoeljadi@gmail.com>
 '''
@@ -50,53 +50,94 @@ __status__ = "Prototype"
 import sys
 import os
 import argparse
+import codecs
+from collections import namedtuple
 
 #-----------------------------------------------------------------------
 # CONFIGURATION
 #-----------------------------------------------------------------------
 
-BAHASA_WORDNET_FILE = 'data/wn-msa-all.tab'
-SENTI_WORDNET_FILE  = 'data/SentiWordNet_3.0.0_20130122.txt'
-BARASA_FILE         = 'data/barasa.txt'
+BAHASA_WORDNET_FILE = './data/wn-msa-all.tab'
+SENTI_WORDNET_FILE  = './data/SentiWordNet_3.0.0_20130122.txt'
+BARASA_FILE     = './data/barasa.txt'
 
+#-----------------------------------------------------------------------
+# DATA STRUCTURE
+#-----------------------------------------------------------------------
+
+SynsetInfo = namedtuple('SynsetInfo', ['synset', 'pos', 'neg'])
+LemmaInfo  = namedtuple('LemmaInfo', ['lemma', 'pos', 'neg'])
+BarasaInfo = namedtuple('BarasaInfo', ['synset', 'lang', 'goodness', 'lemma', 'pos', 'neg'])
 #-----------------------------------------------------------------------
 # FUNCTIONS
 #-----------------------------------------------------------------------
 
+def read_barasa():
+    lemma_scores = {}
+    with codecs.open(BARASA_FILE, encoding='utf-8', mode='r') as barasa_file:
+        for line in barasa_file.readlines():
+            synset, lang, goodness, lemma, pos, neg = line.strip().split('\t')
+            lemma_scores[lemma] = BarasaInfo(synset, lang, goodness, lemma, pos, neg)
+    return lemma_scores
+
 def gen_barasa():
-	print("Generating Barasa")
-	print("Nah, just kidding...")
+    print("Generating Barasa")
+
+    SYNSET_SCORE = {}
+    LEMMA_SCORE = {}
+
+    with codecs.open(SENTI_WORDNET_FILE, encoding='utf-8', mode='r') as SentiWN:
+        for line in SentiWN.readlines():
+            if line.startswith('#'): ## ignore comments
+                continue
+            ## strip off end-of-line, then split
+            pos, snum, pscore, nscore, lemma, definition = line.strip().split('\t')
+            synset = '%s-%s' % (snum, pos)
+            SYNSET_SCORE[synset] = SynsetInfo(synset, pscore, nscore)
+
+    newlines = []
+    with codecs.open(BAHASA_WORDNET_FILE, encoding='utf-8', mode='r') as BahasaWN:
+        for line in BahasaWN.readlines():
+            synset, lang, goodness, lemma = line.strip().split('\t')
+            if synset in SYNSET_SCORE:
+                sscore = SYNSET_SCORE[synset]
+                LEMMA_SCORE[lemma] = LemmaInfo(lemma, sscore.pos, sscore.neg)                
+                newline = ("%s\t" * 6) % (synset, lang, goodness, lemma, sscore.pos, sscore.neg)
+            newlines.append(newline)
+
+    with codecs.open(BARASA_FILE, encoding='utf-8', mode='w') as barasa_file:
+        barasa_file.write('\n'.join(newlines))
 
 #-----------------------------------------------------------------------
 # MAIN
 #-----------------------------------------------------------------------
 
 def main():
-	'''Main entry of barasa toolkit.
-	'''
+    '''Main entry of barasa toolkit.
+    '''
 
-	# It's easier to create a user-friendly console application by using argparse
-	# See reference at the top of this script
-	parser = argparse.ArgumentParser(description="Toolkit for creating Barasa.")
-	
-	# Positional argument(s)
-	parser.add_argument('-g', '--gen', help='Generate Barasa', action='store_true')
-	# Optional argument(s)
-	group = parser.add_mutually_exclusive_group()
-	group.add_argument("-v", "--verbose", action="store_true")
-	group.add_argument("-q", "--quiet", action="store_true")
+    # It's easier to create a user-friendly console application by using argparse
+    # See reference at the top of this script
+    parser = argparse.ArgumentParser(description="Toolkit for creating Barasa.")
+    
+    # Positional argument(s)
+    parser.add_argument('-g', '--gen', help='Generate Barasa', action='store_true')
+    # Optional argument(s)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-v", "--verbose", action="store_true")
+    group.add_argument("-q", "--quiet", action="store_true")
 
-	# Main script
-	if len(sys.argv) == 1:
-		# User didn't pass any value in, show help
-		parser.print_help()
-	else:
-		# Parse input arguments
-		args = parser.parse_args()
+    # Main script
+    if len(sys.argv) == 1:
+        # User didn't pass any value in, show help
+        parser.print_help()
+    else:
+        # Parse input arguments
+        args = parser.parse_args()
 
-		if args.gen:
-			gen_barasa()
-	pass
+        if args.gen:
+            gen_barasa()
+    pass
 
 if __name__ == "__main__":
-	main()
+    main()
