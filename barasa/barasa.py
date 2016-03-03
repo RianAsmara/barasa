@@ -83,6 +83,8 @@ def read_barasa():
     print("Reading Barasa from %s" % (BARASA_FILE,))
     with codecs.open(BARASA_FILE, encoding='utf-8', mode='r') as barasa_file:
         for line in barasa_file.readlines():
+            if line.startswith('#') or len(line.strip()) == 0: # ignore comments
+                continue
             items = line.strip().split('\t')
             lemma_list.append(items)
         lemma_dict = defaultdict(list)
