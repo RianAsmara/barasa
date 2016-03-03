@@ -60,9 +60,9 @@ from collections import defaultdict
 # CONFIGURATION
 #-----------------------------------------------------------------------
 
-BAHASA_WORDNET_FILE = './data/wn-msa-all.tab'
-SENTI_WORDNET_FILE  = './data/SentiWordNet_3.0.0_20130122.txt'
-BARASA_FILE     = './data/barasa.txt'
+BAHASA_WORDNET_FILE = os.path.abspath('./data/wn-msa-all.tab')
+SENTI_WORDNET_FILE  = os.path.abspath('./data/SentiWordNet_3.0.0_20130122.txt')
+BARASA_FILE     = os.path.abspath('./data/barasa.txt')
 
 #-----------------------------------------------------------------------
 # DATA STRUCTURE
@@ -80,6 +80,7 @@ def read_barasa():
     ''' This function checks the polarity scores of lemmas
     '''
     lemma_list = []
+    print("Reading Barasa from %s" % (BARASA_FILE,))
     with codecs.open(BARASA_FILE, encoding='utf-8', mode='r') as barasa_file:
         for line in barasa_file.readlines():
             items = line.strip().split('\t')
@@ -96,14 +97,13 @@ def read_barasa():
 def gen_barasa():
     ''' This function generates a barasa.txt file with information of polarity scores
     '''
-    print("Generating Barasa")
-
     SYNSET_SCORE = {}
     LEMMA_SCORE = {}
 
+    print("Reading Senti WordNet from %s" % (SENTI_WORDNET_FILE,))
     with codecs.open(SENTI_WORDNET_FILE, encoding='utf-8', mode='r') as SentiWN:
         for line in SentiWN.readlines():
-            if line.startswith('#'): # ignore comments
+            if line.startswith('#') or len(line.strip()) == 0: # ignore comments
                 continue
             # strip off end-of-line, then split
             pos, snum, pscore, nscore, lemma, definition = line.strip().split('\t')
@@ -111,6 +111,7 @@ def gen_barasa():
             SYNSET_SCORE[synset] = SynsetInfo(synset, pscore, nscore)
 
     newlines = []
+    print("Reading Bahasa WordNet from %s" % (BAHASA_WORDNET_FILE,))
     with codecs.open(BAHASA_WORDNET_FILE, encoding='utf-8', mode='r') as BahasaWN:
         for line in BahasaWN.readlines():
             synset, lang, goodness, lemma = line.strip().split('\t')
@@ -120,7 +121,39 @@ def gen_barasa():
                 newline = ("%s\t" * 6) % (synset, lang, goodness, lemma, sscore.pos, sscore.neg)
             newlines.append(newline)
 
+    head = '''# Barasa v1.0.0 (3 March 2016)
+# Copyright 2016 David Moeljadi.
+# All right reserved.
+#
+# Barasa is distributed under the Attribution 4.0 International (CC BY 4.0) license.
+# http://creativecommons.org/licenses/by/4.0/
+#
+# For any information about Barasa:
+# https://github.com/neocl/barasa
+# -------
+#
+# Data format.
+#
+# Barasa is based on SentiWordNet v3.0 and Bahasa Wordnet v1.1.
+# SentiWordNet v3.0 website: http://sentiwordnet.isti.cnr.it
+# Bahasa Wordnet website: http://wn-msa.sourceforge.net
+#
+# File format:
+# synset\tlanguage\tgoodness\tlemma\tPosScore\tNegScore
+# synset is offset-pos from Princeton WordNet 3.0
+# Language: B for Indonesian and Malaysian, I for Indonesian, M for Malaysian
+# Goodness: Y is hand-checked and good, O is good, M is ok, L is low, X is hand-checked and bad
+# The values PosScore and NegScore are the positivity and negativity
+# score assigned by SentiWordNet to the synset.
+# The objectivity score can be calculated as:
+# ObjScore = 1 - (PosScore + NegScore)
+#
+# -------
+'''
+
+    print("Generating Barasa to %s" % (BARASA_FILE,))
     with codecs.open(BARASA_FILE, encoding='utf-8', mode='w') as barasa_file:
+        barasa_file.write(head)
         barasa_file.write('\n'.join(newlines))
 
 #-----------------------------------------------------------------------
