@@ -60,9 +60,9 @@ from collections import defaultdict
 # CONFIGURATION
 #-----------------------------------------------------------------------
 
-BAHASA_WORDNET_FILE = os.path.abspath('./data/wn-msa-all.tab')
-SENTI_WORDNET_FILE  = os.path.abspath('./data/SentiWordNet_3.0.0_20130122.txt')
-BARASA_FILE     = os.path.abspath('./data/barasa.txt')
+BAHASA_WORDNET_FILE = os.path.abspath('../data/wn-msa-all.tab')
+SENTI_WORDNET_FILE  = os.path.abspath('../data/SentiWordNet_3.0.0_20130122.txt')
+BARASA_FILE     = os.path.abspath('../data/barasa.txt')
 
 #-----------------------------------------------------------------------
 # DATA STRUCTURE
